@@ -509,14 +509,6 @@ After logging in, a **profile selector** appears in the Chainlit header bar. Sel
 | **LinkedIn Professional Post Prompts** | Evaluator | LinkedIn-specific criteria — evaluates post objective, writing voice, content format, call-to-action, target audience, author identity, industry context, platform awareness, hashtag/mention requirements, and content exclusions. Weights emphasize Context (35%) and reduce References (15%). Output quality checks professional tone authenticity, hook/scroll-stopping power, audience engagement potential, value delivery/expertise, and LinkedIn platform optimization. Best for: prompts that generate LinkedIn posts, thought leadership content, or professional social media updates. |
 | **Test your optimized prompts** | Direct Chat | Test your newly optimized prompts in real time and see the actual output for yourself — or use it as a full-featured LLM chat, just like Google AI Studio, Claude, or ChatGPT. Attach documents and images directly in the conversation. Features live token streaming (responses appear word-by-word), collapsible thinking/reasoning display, and support for text files (`.py`, `.md`, `.json`, `.csv`, and more), images (`.png`, `.jpg`, `.gif`, `.webp`), and documents (`.pdf`, `.docx`, `.xlsx`, `.pptx`). Uploaded documents are automatically parsed, chunked, vectorized, and available as RAG context. Switch between Google Gemini and Anthropic Claude using the in-chat settings widget. |
 
-### Evaluating a System Prompt
-
-Type `system prompt mode` to switch modes, then paste your system prompt:
-
-```
-You are a medical transcription assistant specializing in
-converting audio recordings into structured SOAP notes...
-```
 
 The evaluator will analyze the system prompt's structure and assess whether it will reliably produce the expected behavior.
 
