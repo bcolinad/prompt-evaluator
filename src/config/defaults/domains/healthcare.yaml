@@ -1,0 +1,20 @@
+domain:
+  name: healthcare
+  description: "Specialized evaluation criteria for medical and healthcare prompts"
+  expected_terminology:
+    - patient
+    - diagnosis
+    - treatment
+    - SOAP
+    - ICD
+    - clinical
+    - medical history
+    - prognosis
+  context_hints:
+    - "Medical prompts should specify patient privacy constraints (HIPAA)"
+    - "Include expected output format (SOAP notes, narrative, structured report)"
+    - "Specify the medical specialty or domain (cardiology, pediatrics, etc.)"
+    - "Define the intended audience (physician, nurse, patient, attorney)"
+  additional_constraints:
+    - "Should specify whether PII handling is required"
+    - "Should mention compliance requirements if applicable"

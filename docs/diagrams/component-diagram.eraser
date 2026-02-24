@@ -1,0 +1,235 @@
+// Prompt Evaluator — Component / Module Diagram
+// Paste this into https://app.eraser.io/workspace/new?template=diagram
+
+// ── Entry Points ─────────────────────────────────────
+src/app.py [icon: play-circle, color: purple, label: "Chainlit App\n(orchestrator)"]
+
+// ── UI Module (extracted from app.py) ────────────────
+ui [icon: monitor, color: violet] {
+  profiles.py [icon: users, label: "Profiles\n─────────\n_PROFILE_TO_TASK_TYPE\n_WELCOME_MESSAGES"]
+  thread_utils.py [icon: hash, label: "Thread Utils\n─────────\nincrement_chat_counter()\n_set_thread_name()"]
+  chat_handler.py [icon: message-circle, label: "Chat Handler\n─────────\n_handle_chat_message()\n_process_attachments()"]
+  evaluation_runner.py [icon: play, label: "Eval Runner\n─────────\n_run_evaluation()\n_STEP_EXTRACTORS"]
+  results_display.py [icon: bar-chart, label: "Results Display\n─────────\n_send_results()\n_send_recommendations()"]
+  audio_handler.py [icon: mic, label: "Audio Handler\n─────────\ntranscribe_audio()"]
+}
+
+// ── Agent Module ─────────────────────────────────────
+agent [icon: cpu, color: indigo] {
+  graph.py [icon: share-2, label: "StateGraph\nDefinition"]
+  state.py [icon: database, label: "AgentState\nTypedDict"]
+  nodes [icon: box, color: blue] {
+    router.py [icon: git-branch, label: "Route Input"]
+    analyzer.py [icon: search, label: "Analyze\n(Prompt + System)"]
+    scorer.py [icon: award, label: "Score\nDimensions"]
+    output_runner.py [icon: play-circle, label: "Run Prompt\nfor Output\n(Nx concurrent)"]
+    output_evaluator.py [icon: shield, label: "Evaluate Output\n(LLM-as-Judge\n+ recommendations)"]
+    improver.py [icon: zap, label: "Generate\nImprovements\n(ToT always-on)"]
+    optimized_runner.py [icon: play-circle, label: "Run Optimized\nPrompt\n(Nx concurrent)"]
+    report_builder.py [icon: bar-chart-2, label: "Build Report\n(CoT+ToT+Meta)"]
+    meta_evaluator.py [icon: shield-check, label: "Meta Evaluate\n(always active)"]
+    conversational.py [icon: message-circle, label: "Follow-up\nHandler"]
+  }
+}
+
+// ── Evaluator Module ─────────────────────────────────
+evaluator [icon: check-square, color: green] {
+  __init__.py [icon: file, label: "Pydantic Models\n─────────\nEvaluationResult\nDimensionScore\nImprovement\nTCREIFlags"]
+  criteria [icon: list, label: "Criteria Package\n─────────\n_CRITERIA_REGISTRY\nget_criteria_for_task_type()"]
+  example_prompts.py [icon: file-text, label: "Example Prompts\n─────────\nExamplePrompt\nAnnotatedSection\nEXAMPLE_PROMPTS"]
+  llm_schemas.py [icon: file-text, label: "LLM Schemas\n─────────\nAnalysisLLMResponse\nImprovementsLLMResponse\nOutputEvaluationLLMResponse\nFollowupLLMResponse"]
+  strategies.py [icon: sliders, label: "Strategies\n─────────\nEvaluationStrategy\nStrategyConfig\nget_default_strategy()"]
+  service.py [icon: play-circle, label: "Evaluation Service\n─────────\nPromptEvaluationService\nEvaluationReport"]
+}
+
+// ── Prompts Module ───────────────────────────────────
+prompts [icon: file-text, color: orange] {
+  __init__.py [icon: file, label: "Re-exports\n(all prompt constants)"]
+  general.py [icon: file, label: "General Prompts"]
+  email.py [icon: file, label: "Email Prompts"]
+  summarization.py [icon: file, label: "Summarization Prompts"]
+  coding.py [icon: file, label: "Coding Prompts"]
+  exam.py [icon: file, label: "Exam Prompts"]
+  linkedin.py [icon: file, label: "LinkedIn Prompts"]
+  registry.py [icon: book, label: "Prompt Registry\n─────────\nTaskTypePrompts\n_REGISTRY\nget_prompts_for_task_type()"]
+  strategies [icon: folder, color: red] {
+    cot.py [icon: file, label: "CoT Prompts"]
+    tot.py [icon: file, label: "ToT Prompts"]
+    meta.py [icon: file, label: "Meta Prompts"]
+  }
+}
+
+// ── Config Module ────────────────────────────────────
+config [icon: settings, color: gray] {
+  __init__.py [icon: lock, label: "Pydantic Settings\n(.env → typed config)"]
+  eval_config.py [icon: sliders, label: "YAML Config Loader\nEvalConfig model"]
+  defaults [icon: folder] {
+    eval_config.yaml [icon: file]
+    domains [icon: folder] {
+      healthcare.yaml [icon: file]
+    }
+  }
+}
+
+// ── Database Module ──────────────────────────────────
+db [icon: database, color: blue] {
+  __init__.py [icon: zap, label: "Async Engine\nSession Factory"]
+  models.py [icon: layers, label: "SQLAlchemy Models\n─────────\nEvaluation\nEvalConfig"]
+  repository.py [icon: archive, label: "Repository\n─────────\nEvaluationRepo\nConfigRepo"]
+}
+
+// ── Embeddings Module ──────────────────────────────
+embeddings [icon: zap, color: pink] {
+  service.py [icon: search, label: "Embedding Service\n─────────\ngenerate_embedding()\nstore_evaluation_embedding()\nfind_similar_evaluations()"]
+}
+
+// ── RAG Module ───────────────────────────────────────
+rag [icon: book, color: teal] {
+  knowledge_store.py [icon: search, label: "Knowledge Store\n─────────\nInMemoryVectorStore\nretrieve_context()"]
+}
+
+// ── Knowledge Base ──────────────────────────────────
+knowledge [icon: book-open, color: cyan] {
+  tcrei_framework.md [icon: file-text, label: "T.C.R.E.I. Framework"]
+  scoring_guide.md [icon: file-text, label: "Scoring Guide"]
+}
+
+// ── Utils Module ─────────────────────────────────────
+utils [icon: tool, color: amber] {
+  llm_factory.py [icon: cpu, label: "LLM Factory\n─────────\nget_llm()\nGoogle → Anthropic → Ollama"]
+  structured_output.py [icon: code, label: "Structured Output\n─────────\ninvoke_structured()"]
+  chunking.py [icon: scissors, label: "Adaptive Chunking\n─────────\nchunk_prompt()\naggregate_scores()"]
+  report_generator.py [icon: file-text, label: "HTML Report\n─────────\ngenerate_audit_report()"]
+  langsmith_utils.py [icon: activity, label: "LangSmith\n─────────\nscore_run()"]
+  logging_config.py [icon: list, label: "Logging\n─────────\nsetup_logging()"]
+  local_storage.py [icon: hard-drive, label: "Local Storage\n─────────\nLocalStorageClient"]
+  example_formatter.py [icon: edit, label: "Example Formatter\n─────────\nformat_example_markdown()"]
+  custom_data_layer.py [icon: shield, label: "Custom Data Layer\n─────────\nCustomDataLayer\n(thread cleanup)"]
+}
+
+// ── External Services ────────────────────────────────
+Google Gemini API [icon: cloud, color: blue, label: "Google Gemini\n(2.5 Flash)"]
+Anthropic API [icon: cloud, color: orange, label: "Anthropic Claude\n(Opus 4.6)"]
+Ollama [icon: server, color: purple, label: "Ollama\n(Chat + Embeddings)"]
+PostgreSQL [icon: database, color: blue, label: "PostgreSQL\n(+ pgvector)"]
+LangSmith [icon: activity, color: green]
+
+// ── Dependencies ─────────────────────────────────────
+
+// App → UI modules
+src/app.py > ui: delegates handlers
+
+// UI → Agent
+evaluation_runner.py > graph.py: invokes graph
+results_display.py > report_generator.py: generates reports
+chat_handler.py > llm_factory.py: get_chat_llm
+
+// App → Agent
+src/app.py > evaluator: formats results
+
+// Graph → Nodes
+graph.py > state.py: defines state schema
+graph.py > router.py
+graph.py > analyzer.py
+graph.py > scorer.py
+graph.py > output_runner.py
+graph.py > output_evaluator.py
+graph.py > improver.py
+graph.py > report_builder.py
+graph.py > meta_evaluator.py
+graph.py > optimized_runner.py
+graph.py > conversational.py
+
+// Nodes → Evaluator
+analyzer.py > criteria.py: loads criteria
+analyzer.py > evaluator: returns DimensionScore
+scorer.py > eval_config.py: loads weights
+improver.py > evaluator: returns EvaluationResult
+
+// Nodes → Prompts (via registry)
+analyzer.py > registry.py: get_prompts_for_task_type()
+improver.py > registry.py: get_prompts_for_task_type()
+output_evaluator.py > registry.py: get_prompts_for_task_type()
+
+// Nodes → Config
+analyzer.py > config: LLM settings
+improver.py > config: LLM settings
+
+// Nodes → Prompts (conversational)
+conversational.py > prompts: uses followup prompt
+
+// Nodes → External (LLM calls via cascade: Google → Anthropic → Ollama)
+analyzer.py > Google Gemini API: LLM calls (primary)
+analyzer.py > Anthropic API: LLM calls (fallback 1)
+analyzer.py > Ollama: LLM calls (fallback 2)
+improver.py > Google Gemini API: LLM calls
+output_runner.py > Google Gemini API: Execute prompt (Nx)
+optimized_runner.py > Google Gemini API: Execute optimized prompt (Nx)
+output_evaluator.py > Google Gemini API: LLM-as-Judge
+conversational.py > Google Gemini API: LLM calls
+
+// DB connections
+improver.py > repository.py: save evaluation
+repository.py > models.py: ORM mapping
+db > PostgreSQL: async connection
+
+// Output evaluator → Improver (output quality findings)
+output_evaluator.py > evaluator: OutputEvaluationResult
+improver.py > evaluator: reads OutputEvaluationResult from state
+
+// Nodes → Structured Output
+analyzer.py > structured_output.py: invoke_structured()
+improver.py > structured_output.py: invoke_structured()
+output_evaluator.py > structured_output.py: invoke_structured()
+conversational.py > structured_output.py: invoke_structured()
+
+// Nodes → LLM Schemas
+analyzer.py > llm_schemas.py: AnalysisLLMResponse
+improver.py > llm_schemas.py: ImprovementsLLMResponse
+output_evaluator.py > llm_schemas.py: OutputEvaluationLLMResponse
+conversational.py > llm_schemas.py: FollowupLLMResponse
+
+// Nodes → RAG
+analyzer.py > knowledge_store.py: retrieve_context()
+improver.py > knowledge_store.py: retrieve_context()
+
+// Nodes → Chunking
+analyzer.py > chunking.py: should_chunk() + chunk_prompt()
+
+// RAG → Knowledge
+knowledge_store.py > knowledge: loads knowledge docs
+knowledge_store.py > criteria.py: serializes criteria
+knowledge_store.py > defaults: loads domain configs
+
+// Nodes → Embeddings
+analyzer.py > service.py: find_similar_evaluations()
+report_builder.py > service.py: store_evaluation_embedding()
+
+// Embeddings → External
+service.py > Ollama: generate embeddings
+service.py > PostgreSQL: pgvector storage + search
+
+// App → Data Layer
+src/app.py > custom_data_layer.py: thread cleanup on delete
+
+// App → Example Prompts
+src/app.py > example_prompts.py: get_example_for_task_type()
+src/app.py > example_formatter.py: format_example_markdown()
+example_formatter.py > example_prompts.py: ExamplePrompt type
+
+// Meta evaluator → Prompts + Structured Output
+meta_evaluator.py > strategies: uses meta prompts
+meta_evaluator.py > structured_output.py: invoke_structured()
+
+// Service → Graph + Strategies
+service.py > graph.py: get_graph().astream()
+service.py > strategies.py: get_default_strategy()
+
+// Evaluation runner → Strategies
+evaluation_runner.py > strategies.py: get_default_strategy()
+
+// App → Auth
+src/app.py > config: auth settings
+
+// Observability
+graph.py > LangSmith: automatic tracing

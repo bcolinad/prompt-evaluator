@@ -1,0 +1,62 @@
+// Prompt Evaluator — LangGraph Workflow
+// Paste this into https://app.eraser.io/workspace/new?template=sequence-diagram
+
+// ── LangGraph StateGraph Flow ────────────────────────
+
+__start__ [icon: play, color: green]
+route_input [icon: git-branch, color: indigo, label: "Route Input\n─────────\nDetect mode & phase:\nprompt vs system prompt\nstructure / output / full"]
+analyze_prompt [icon: search, color: blue, label: "Analyze Prompt (CoT)\n─────────\nEvaluate T.C.R.E.I.\ndimensions via LLM\n+ Chain-of-Thought reasoning\n+ retrieve similar evals"]
+analyze_system_prompt [icon: shield, color: cyan, label: "Analyze System Prompt (CoT)\n─────────\nEvaluate system prompt\nvs expected outcome\n+ Chain-of-Thought reasoning"]
+score_prompt [icon: award, color: amber, label: "Score Prompt\n─────────\nWeighted scoring\nper dimension\nAssign grade"]
+run_prompt_for_output [icon: play-circle, color: teal, label: "Run Prompt for Output (Nx)\n─────────\nExecute prompt via LLM\nN concurrent runs\n(configurable 2-5)\nError-safe aggregation"]
+evaluate_output [icon: shield, color: emerald, label: "Evaluate Output\n─────────\nLLM-as-Judge scoring\n5 quality dimensions\nPer-dimension recommendations"]
+generate_improvements [icon: zap, color: orange, label: "Generate Improvements (ToT)\n─────────\nTree-of-Thought exploration\nMulti-branch generation\nBranch selection + synthesis\nPrioritized suggestions\nFull prompt rewrite"]
+run_optimized_prompt [icon: play-circle, color: lime, label: "Run Optimized Prompt (Nx)\n─────────\nExecute rewritten prompt\nN concurrent runs\nValidate optimization"]
+evaluate_optimized_output [icon: shield, color: emerald, label: "Evaluate Optimized Output\n─────────\nLLM-as-Judge scoring\nSame 5 quality dimensions\nCompare vs original"]
+meta_evaluate [icon: shield-check, color: pink, label: "Meta-Evaluate (always)\n─────────\nSelf-assessment pass\nAccuracy, Completeness\nActionability, Faithfulness\nOverall Confidence"]
+build_report [icon: bar-chart-2, color: green, label: "Build Report\n─────────\nMerge structure + output\n+ optimized output\ninto FullEvaluationReport\n+ CoT/ToT/Meta data\n+ store embedding"]
+handle_followup [icon: refresh-cw, color: purple, label: "Handle Follow-up\n─────────\nProcess user questions\nabout evaluation"]
+__end__ [icon: square, color: red]
+
+// ── Edges ────────────────────────────────────────────
+
+__start__ > route_input
+
+// Conditional: phase-based routing
+route_input > analyze_prompt: STRUCTURE/FULL + prompt mode
+route_input > analyze_system_prompt: STRUCTURE/FULL + system mode
+route_input > run_prompt_for_output: OUTPUT mode
+
+// Both analyzers converge to scorer
+analyze_prompt > score_prompt
+analyze_system_prompt > score_prompt
+
+// Conditional after scoring: FULL → output, STRUCTURE → improve
+score_prompt > run_prompt_for_output: FULL mode
+score_prompt > generate_improvements: STRUCTURE mode
+
+// Output pipeline (Nx concurrent executions)
+run_prompt_for_output > evaluate_output
+
+// Conditional after output eval: FULL → improve, OUTPUT → report
+evaluate_output > generate_improvements: FULL mode
+evaluate_output > build_report: OUTPUT mode
+
+// After improvements: run optimized prompt or meta-evaluate
+generate_improvements > run_optimized_prompt: rewritten_prompt exists
+generate_improvements > meta_evaluate: no rewritten_prompt
+
+// Optimized prompt pipeline (Nx concurrent executions)
+run_optimized_prompt > evaluate_optimized_output
+evaluate_optimized_output > meta_evaluate
+
+// Meta-evaluate always flows to report
+meta_evaluate > build_report
+
+// Conditional: continue or end
+build_report > handle_followup: should_continue = true
+build_report > __end__: should_continue = false
+
+// Conditional: follow-up routing
+handle_followup > route_input: followup_action = "re_evaluate"
+handle_followup > __end__: explain / adjust_rewrite / mode_switch

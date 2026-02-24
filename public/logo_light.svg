@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="80" viewBox="0 0 520 80" fill="none">
+  <!-- Diamond/gem icon — "Professional Prompt Shaper" brand mark -->
+  <path d="M35 5 L63 28 L35 65 L7 28 Z" fill="#E0E7FF" stroke="#6366F1" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M7 28 L35 35 L63 28" stroke="#6366F1" stroke-width="1.2" opacity="0.5"/>
+  <path d="M35 5 L35 35" stroke="#6366F1" stroke-width="1.2" opacity="0.5"/>
+  <!-- Prompt cursor ">" -->
+  <path d="M24 15 L38 22 L24 29" stroke="#4F46E5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Sparkle -->
+  <circle cx="55" cy="10" r="2.5" fill="#A78BFA"/>
+  <line x1="55" y1="5" x2="55" y2="15" stroke="#A78BFA" stroke-width="1.2" stroke-linecap="round"/>
+  <line x1="50" y1="10" x2="60" y2="10" stroke="#A78BFA" stroke-width="1.2" stroke-linecap="round"/>
+  <!-- Brand name -->
+  <text x="80" y="48" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="28" font-weight="600" fill="#312E81" letter-spacing="-0.5">Professional Prompt Shaper</text>
+</svg>

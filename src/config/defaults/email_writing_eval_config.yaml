@@ -1,0 +1,35 @@
+evaluation:
+  dimensions:
+    task:
+      weight: 0.30
+      sub_criteria:
+        - email_action_specified
+        - tone_style_defined
+        - email_purpose_clear
+        - email_structure_specified
+    context:
+      weight: 0.30
+      sub_criteria:
+        - recipient_defined
+        - sender_context_provided
+        - situation_background
+        - relationship_dynamic
+    references:
+      weight: 0.15
+      sub_criteria:
+        - email_examples_provided
+        - key_points_listed
+        - prior_thread_context
+    constraints:
+      weight: 0.25
+      sub_criteria:
+        - length_brevity
+        - formality_level
+        - content_exclusions
+        - call_to_action_specified
+
+  grading_scale:
+    excellent: 85
+    good: 65
+    needs_work: 40
+    weak: 0

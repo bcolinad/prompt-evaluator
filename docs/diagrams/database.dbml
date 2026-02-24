@@ -1,0 +1,313 @@
+// Prompt Evaluator — Database Schema
+// Paste this into https://dbdiagram.io/d
+// Documentation: https://dbml.dbdiagram.io/docs
+
+Project prompt_evaluator {
+  database_type: 'PostgreSQL'
+  Note: '''
+    # Prompt Evaluator Database
+    Stores evaluation history, custom configurations, and session data
+    for the T.C.R.E.I. prompt evaluation agent.
+  '''
+}
+
+// ── Core Tables ──────────────────────────────────────
+
+Table evaluations {
+  id uuid [pk, default: `uuid_generate_v4()`, note: 'Unique evaluation identifier']
+  session_id varchar(255) [not null, note: 'Chainlit session ID — groups evaluations per conversation']
+  thread_id varchar(255) [null, note: 'Chainlit thread ID — enables cleanup on thread deletion']
+  mode varchar(50) [not null, note: 'Evaluation mode: "prompt" or "system_prompt"']
+
+  // Input
+  input_text text [not null, note: 'The original prompt or system prompt being evaluated']
+  expected_outcome text [null, note: 'For system_prompt mode: what the user expects the prompt to produce']
+
+  // Scores
+  overall_score integer [not null, note: 'Weighted overall score (0-100)']
+  grade varchar(20) [not null, note: 'Excellent | Good | Needs Work | Weak']
+  task_score integer [null, note: 'Task dimension score (0-100)']
+  context_score integer [null, note: 'Context dimension score (0-100)']
+  references_score integer [null, note: 'References dimension score (0-100)']
+  constraints_score integer [null, note: 'Constraints dimension score (0-100)']
+
+  // Detailed results (JSON)
+  analysis jsonb [not null, default: '{}', note: 'Full dimension analysis with sub-criteria results']
+  improvements jsonb [not null, default: '[]', note: 'Prioritized improvement suggestions']
+  rewritten_prompt text [null, note: 'AI-generated improved version of the prompt']
+  config_snapshot jsonb [null, note: 'Eval config used at evaluation time — for reproducibility']
+
+  // Output evaluation fields
+  eval_phase varchar(20) [null, note: 'Evaluation phase: "structure", "output", or "full"']
+  llm_output text [null, note: 'Raw LLM output when running output evaluation']
+  output_evaluation jsonb [null, note: 'Full output evaluation result with dimension scores']
+  langsmith_run_id varchar(255) [null, note: 'LangSmith run ID for output evaluation feedback scoring']
+
+  // Metadata
+  created_at timestamptz [not null, default: `now()`, note: 'When the evaluation was performed']
+
+  indexes {
+    session_id [name: 'idx_evaluations_session']
+    thread_id [name: 'idx_evaluations_thread']
+    created_at [name: 'idx_evaluations_created']
+    grade [name: 'idx_evaluations_grade']
+    (session_id, created_at) [name: 'idx_evaluations_session_time']
+  }
+
+  Note: '''
+    Stores every prompt evaluation performed through the agent.
+    Each row represents a single evaluation pass.
+    A session may contain multiple evaluations (iterative refinement).
+  '''
+}
+
+Table eval_configs {
+  id uuid [pk, default: `uuid_generate_v4()`, note: 'Unique config identifier']
+  name varchar(255) [unique, not null, note: 'Human-readable config name (e.g., "default", "healthcare")']
+  description text [null, note: 'What this config specializes in']
+  config jsonb [not null, note: 'Full evaluation config: dimensions, weights, sub_criteria, grading_scale']
+  is_default boolean [default: false, note: 'Whether this is the active default configuration']
+
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (is_default) [name: 'idx_eval_configs_default', note: 'Fast lookup of default config']
+  }
+
+  Note: '''
+    Custom evaluation configurations.
+    Users can create domain-specific configs (healthcare, software, etc.)
+    that adjust dimension weights and criteria.
+  '''
+}
+
+// ── Embedding Tables ────────────────────────────────
+
+Table conversation_embeddings {
+  id uuid [pk, default: `uuid_generate_v4()`, note: 'Unique embedding identifier']
+  user_id uuid [null, ref: > User.id, note: 'Owner of the evaluation (FK → User)']
+  thread_id varchar(255) [null, note: 'Chainlit thread ID — enables cleanup on thread deletion']
+  evaluation_id uuid [null, ref: > evaluations.id, note: 'Linked evaluation record (FK → evaluations)']
+
+  // Content
+  input_text text [not null, note: 'The original prompt being evaluated']
+  rewritten_prompt text [null, note: 'AI-generated improved version']
+  overall_score integer [not null, note: 'Weighted overall score (0-100)']
+  grade varchar(20) [not null, note: 'Excellent | Good | Needs Work | Weak']
+  output_score double [null, note: 'Output quality score (0.0-1.0)']
+  improvements_summary text [null, note: 'Text summary of suggested improvements']
+
+  // Vector
+  embedding "vector(768)" [not null, note: 'Ollama nomic-embed-text vector']
+  metadata jsonb [not null, default: '{}', note: 'Additional metadata']
+
+  // Timestamp
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    user_id [name: 'idx_conv_embeddings_user']
+    thread_id [name: 'idx_conv_embeddings_thread']
+    evaluation_id [name: 'idx_conv_embeddings_eval']
+  }
+
+  Note: '''
+    Stores vectorized evaluation summaries for similarity search.
+    Uses pgvector IVFFlat index on embedding column for cosine similarity.
+    Enables self-learning: past evaluations enhance new analyses with
+    historical context and effective improvement patterns.
+  '''
+}
+
+// ── Document Processing Tables ──────────────────────
+
+Table documents {
+  id uuid [pk, default: `uuid_generate_v4()`, note: 'Unique document identifier']
+  thread_id varchar(255) [null, note: 'Chainlit thread ID — enables cleanup on thread deletion']
+  filename varchar(255) [not null, note: 'Original uploaded filename']
+  content_type varchar(100) [not null, note: 'MIME type of the uploaded file (e.g., application/pdf)']
+  file_size integer [not null, note: 'File size in bytes']
+  extracted_text text [not null, note: 'Full text extracted from the document']
+  metadata jsonb [not null, default: '{}', note: 'Additional document metadata (page count, author, etc.)']
+  created_at timestamptz [not null, default: `now()`, note: 'When the document was uploaded and processed']
+
+  indexes {
+    thread_id [name: 'idx_documents_thread']
+    created_at [name: 'idx_documents_created']
+  }
+
+  Note: '''
+    Stores uploaded document metadata and extracted text.
+    Supported formats: PDF, DOCX, XLSX, PPTX.
+    Documents are parsed via LangChain loaders.
+    Linked to Chainlit threads for lifecycle management.
+  '''
+}
+
+Table document_chunks {
+  id uuid [pk, default: `uuid_generate_v4()`, note: 'Unique chunk identifier']
+  document_id uuid [not null, ref: > documents.id, note: 'Parent document (FK → documents)']
+  chunk_index integer [not null, note: 'Position of this chunk within the document (0-based)']
+  content text [not null, note: 'Chunk text content']
+  embedding "vector(768)" [not null, note: 'Ollama nomic-embed-text vector (HNSW indexed)']
+  metadata jsonb [not null, default: '{}', note: 'Chunk-level metadata (page number, section, etc.)']
+  created_at timestamptz [not null, default: `now()`, note: 'When the chunk was created']
+
+  indexes {
+    document_id [name: 'idx_doc_chunks_document']
+  }
+
+  Note: '''
+    Stores vectorized document chunks for RAG retrieval.
+    Uses pgvector HNSW index on embedding column for cosine similarity search.
+    Chunks are generated by RecursiveCharacterTextSplitter with configurable
+    chunk_size (DOC_CHUNK_SIZE) and overlap (DOC_CHUNK_OVERLAP).
+    Enables document-grounded prompt evaluation and improvement suggestions.
+  '''
+}
+
+// ── Chainlit Data Layer ─────────────────────────────
+
+Table User {
+  id uuid [pk, default: `uuid_generate_v4()`]
+  identifier text [unique, not null]
+  metadata jsonb [not null, default: '{}']
+  createdAt timestamptz [not null, default: `now()`]
+  updatedAt timestamptz [not null, default: `now()`]
+}
+
+Table Thread {
+  id uuid [pk, default: `uuid_generate_v4()`]
+  name text
+  userId uuid [ref: > User.id]
+  metadata jsonb [not null, default: '{}']
+  tags "text[]"
+  createdAt timestamptz [not null, default: `now()`]
+  updatedAt timestamptz [not null, default: `now()`]
+  deletedAt timestamptz
+}
+
+// ── JSON Column Schemas ──────────────────────────────
+// These document the structure of JSONB columns
+
+// evaluations.analysis schema:
+// {
+//   "dimensions": [
+//     {
+//       "name": "task",
+//       "score": 75,
+//       "sub_criteria": [
+//         {"name": "clear_action_verb", "found": true, "detail": "Found verb 'Write'"},
+//         {"name": "persona_defined", "found": false, "detail": "No persona specified"}
+//       ]
+//     }
+//   ],
+//   "tcrei_flags": {
+//     "task": true,
+//     "context": false,
+//     "references": false,
+//     "evaluate": false,
+//     "iterate": false
+//   }
+// }
+
+// evaluations.improvements schema:
+// [
+//   {
+//     "priority": "CRITICAL",
+//     "title": "Specify the task",
+//     "suggestion": "Instead of 'something about dogs', state exactly what..."
+//   }
+// ]
+
+// eval_configs.config schema:
+// {
+//   "dimensions": {
+//     "task": {"weight": 0.30, "sub_criteria": ["clear_action_verb", "specific_deliverable", ...]},
+//     "context": {"weight": 0.25, "sub_criteria": [...]},
+//     "references": {"weight": 0.20, "sub_criteria": [...]},
+//     "constraints": {"weight": 0.25, "sub_criteria": [...]}
+//   },
+//   "grading_scale": {"excellent": 85, "good": 65, "needs_work": 40, "weak": 0}
+// }
+
+// evaluations.output_evaluation schema:
+// {
+//   "prompt_used": "Write me something about dogs",
+//   "llm_output": "Dogs are wonderful companions...",
+//   "provider": "anthropic",
+//   "model": "claude-sonnet-4-20250514",
+//   "dimensions": [
+//     {"name": "relevance", "score": 0.85, "comment": "Directly addresses the prompt", "evaluation_technique": "LangSmith LLM-as-Judge"},
+//     {"name": "coherence", "score": 0.90, "comment": "Well-structured", "evaluation_technique": "LangSmith LLM-as-Judge"},
+//     {"name": "completeness", "score": 0.70, "comment": "Covers main points", "evaluation_technique": "LangSmith LLM-as-Judge"},
+//     {"name": "instruction_following", "score": 0.80, "comment": "Follows constraints", "evaluation_technique": "LangSmith LLM-as-Judge"},
+//     {"name": "hallucination_risk", "score": 0.95, "comment": "No fabricated claims", "evaluation_technique": "LangSmith LLM-as-Judge"}
+//   ],
+//   "overall_score": 0.84,
+//   "grade": "Good",
+//   "langsmith_run_id": "trace-abc123",
+//   "findings": ["Evaluated using LangSmith LLM-as-Judge scoring.", "Output is relevant but lacks depth."]
+// }
+
+// evaluations — strategy_used field (stored in FullEvaluationReport.strategy_used):
+// Always "enhanced (CoT+ToT+Meta)" — all techniques are always active.
+
+// evaluations — execution_count field (stored in FullEvaluationReport.execution_count):
+// Number of times each prompt (original + optimized) was executed. Default: 2, range: 2-5.
+
+// evaluations — original_outputs field (stored in FullEvaluationReport.original_outputs):
+// ["--- Run 1 ---\nOutput text...", "--- Run 2 ---\nOutput text..."]
+
+// evaluations — optimized_outputs field (stored in FullEvaluationReport.optimized_outputs):
+// ["--- Run 1 ---\nOptimized output...", "--- Run 2 ---\nOptimized output..."]
+// null if no rewritten_prompt was generated.
+
+// evaluations — optimized_output_result field (stored in FullEvaluationReport.optimized_output_result):
+// Same schema as evaluations.output_evaluation (OutputEvaluationResult) but for the optimized prompt.
+// null if no rewritten_prompt was generated.
+// {
+//   "prompt_used": "Rewritten prompt text...",
+//   "llm_output": "Optimized output text...",
+//   "provider": "anthropic",
+//   "model": "claude-sonnet-4-20250514",
+//   "dimensions": [...],  // same 5 quality dimensions
+//   "overall_score": 0.91,
+//   "grade": "Excellent",
+//   "findings": [...]
+// }
+
+// evaluations — cot_reasoning_trace field (stored in FullEvaluationReport.cot_reasoning_trace):
+// String capturing the Chain-of-Thought reasoning from the analysis phase.
+// Contains step-by-step T.C.R.E.I. dimension reasoning. null if capture failed.
+
+// evaluations — tot_branches_data field (stored in FullEvaluationReport.tot_branches_data):
+// {
+//   "branches": [
+//     {
+//       "approach": "Focus on task clarity",
+//       "improvements_count": 3,
+//       "rewritten_prompt_preview": "First 200 chars of rewritten prompt...",
+//       "confidence": 0.85
+//     }
+//   ],
+//   "selected_branch_index": 0,
+//   "selection_rationale": "Branch 1 had the best improvements",
+//   "synthesized": false
+// }
+// null if ToT failed and fell back to standard improvements.
+
+// evaluations — meta_assessment field (stored in FullEvaluationReport.meta_assessment):
+// Always present (meta-evaluation is always active):
+// {
+//   "accuracy_score": 0.92,       // 0.0-1.0: How accurately the evaluation assessed the prompt
+//   "completeness_score": 0.87,   // 0.0-1.0: Whether all relevant aspects were covered
+//   "actionability_score": 0.85,  // 0.0-1.0: How actionable the suggestions are
+//   "faithfulness_score": 0.95,   // 0.0-1.0: Whether evaluation stays grounded in the prompt
+//   "overall_confidence": 0.90    // 0.0-1.0: Overall confidence in the evaluation quality
+// }
+
+// ── Relationships ────────────────────────────────────
+// evaluations.config_snapshot is a snapshot copy of eval_configs.config
+// at the time of evaluation — no FK, intentional denormalization for
+// reproducibility (config may change, but past evaluations remain stable)

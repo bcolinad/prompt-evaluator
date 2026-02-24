@@ -1,0 +1,35 @@
+evaluation:
+  dimensions:
+    task:
+      weight: 0.30
+      sub_criteria:
+        - assessment_objective_defined
+        - question_design_specified
+        - difficulty_calibration
+        - rubric_or_scoring_defined
+    context:
+      weight: 0.25
+      sub_criteria:
+        - candidate_profile_defined
+        - assessment_context_provided
+        - subject_domain_specified
+        - time_constraints_defined
+    references:
+      weight: 0.20
+      sub_criteria:
+        - sample_questions_provided
+        - source_material_referenced
+        - assessment_standards_referenced
+    constraints:
+      weight: 0.25
+      sub_criteria:
+        - fairness_and_bias_safeguards
+        - anti_cheating_measures
+        - format_and_structure_constraints
+        - content_exclusions
+
+  grading_scale:
+    excellent: 85
+    good: 65
+    needs_work: 40
+    weak: 0

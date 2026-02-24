@@ -1,0 +1,123 @@
+// Prompt Evaluator — System Architecture
+// Paste this into https://app.eraser.io/workspace/new?template=diagram
+
+// ── External Actors ──────────────────────────────────
+User [icon: user, color: blue]
+
+// ── Presentation Layer ───────────────────────────────
+Chainlit UI [icon: monitor, color: purple] {
+  Login Page [icon: lock, label: "Password Auth"]
+  Chat Interface [icon: message-circle]
+  Thinking Steps Panel [icon: loader]
+  Evaluation Results View [icon: bar-chart-2]
+  Recommendations Panel [icon: list, label: "Similar Past\nEvaluations"]
+  Settings Panel [icon: settings]
+}
+
+// ── Agent Layer (LangGraph) ──────────────────────────
+LangGraph Agent [icon: cpu, color: indigo] {
+  Route Input [icon: git-branch, label: "route_input"]
+  Analyze Prompt [icon: search, label: "analyze_prompt"]
+  Analyze System Prompt [icon: shield, label: "analyze_system_prompt"]
+  Score Prompt [icon: award, label: "score_prompt"]
+  Generate Improvements [icon: zap, label: "generate_improvements"]
+  Run Prompt For Output [icon: play, label: "run_prompt_for_output"]
+  Evaluate Output [icon: check-square, label: "evaluate_output"]
+  Meta Evaluate [icon: shield-check, label: "meta_evaluate\n(conditional)"]
+  Build Report [icon: file-text, label: "build_report"]
+  Conversation Loop [icon: refresh-cw, label: "handle_followup"]
+}
+
+// ── LLM Providers ────────────────────────────────────
+Google Gemini [icon: cloud, color: blue, label: "Google Gemini\n(2.5 Flash)"]
+Claude API [icon: cloud, color: orange, label: "Anthropic Claude\n(Opus 4.6)"]
+Ollama Chat [icon: server, color: green, label: "Ollama Chat\n(Qwen 3 4B)"]
+
+// ── Embedding Layer ──────────────────────────────────
+Ollama Embeddings [icon: server, color: purple, label: "Ollama\n(nomic-embed-text)"]
+
+// ── Data Layer ───────────────────────────────────────
+PostgreSQL [icon: database, color: blue] {
+  evaluations [icon: file-text, label: "evaluations"]
+  eval_configs [icon: sliders, label: "eval_configs"]
+  conversation_embeddings [icon: zap, label: "conversation_embeddings\n(pgvector)"]
+  documents [icon: file, label: "documents"]
+  document_chunks [icon: layers, label: "document_chunks\n(pgvector HNSW)"]
+}
+
+// ── Document Processing Layer ───────────────────────
+Document Processor [icon: file-plus, color: rose] {
+  Doc Loader [icon: upload, label: "Loader\n(PDF, DOCX, XLSX, PPTX)"]
+  Doc Extractor [icon: search, label: "LLM Extractor"]
+  Doc Chunker [icon: scissors, label: "Chunker"]
+  Doc Vectorizer [icon: zap, label: "Vectorizer"]
+  Doc Retriever [icon: book-open, label: "RAG Retriever"]
+}
+
+// ── Observability ────────────────────────────────────
+LangSmith [icon: activity, color: green] {
+  Traces [icon: list]
+  Feedback Scores [icon: trending-up]
+  Run History [icon: clock]
+}
+
+// ── RAG / Knowledge Layer ─────────────────────────────
+Knowledge Layer [icon: book, color: teal] {
+  Knowledge Store [icon: search, label: "InMemoryVectorStore\nretrieve_context()"]
+  T.C.R.E.I. Docs [icon: file-text, label: "Framework + Scoring"]
+  Domain Configs [icon: layers, label: "Domain YAML"]
+}
+
+// ── Configuration ────────────────────────────────────
+Config Layer [icon: settings, color: gray] {
+  eval_config.yaml [icon: file, label: "Eval Config (YAML)"]
+  Pydantic Settings [icon: lock, label: "Settings (.env)"]
+  Domain Presets [icon: layers, label: "Domain Configs"]
+}
+
+// ── Connections ──────────────────────────────────────
+
+// User flow
+User > Chainlit UI: Chat messages
+Chainlit UI > LangGraph Agent: User input + session
+
+// Agent internal flow
+Route Input > Analyze Prompt: mode = prompt
+Route Input > Analyze System Prompt: mode = system_prompt
+Analyze Prompt > Score Prompt
+Analyze System Prompt > Score Prompt
+Score Prompt > Generate Improvements
+Generate Improvements > Meta Evaluate: strategy.use_meta
+Generate Improvements > Build Report: no meta
+Meta Evaluate > Build Report
+Generate Improvements > Conversation Loop: follow-up
+Conversation Loop > Route Input: re-evaluate
+
+// LLM calls (cascade: Google → Anthropic → Ollama)
+Analyze Prompt > Google Gemini: Dimension analysis (primary)
+Analyze Prompt > Claude API: Dimension analysis (fallback 1)
+Analyze Prompt > Ollama Chat: Dimension analysis (fallback 2)
+Generate Improvements > Google Gemini: Suggestions + rewrite
+Conversation Loop > Google Gemini: Follow-up classification
+Run Prompt For Output > Google Gemini: Execute prompt
+Evaluate Output > Google Gemini: LLM-as-Judge scoring
+
+// Data persistence
+Generate Improvements > PostgreSQL: Save evaluation
+LangGraph Agent > LangSmith: Trace every run
+
+// Embedding flow
+Analyze Prompt > Ollama Embeddings: Query embedding
+Build Report > Ollama Embeddings: Store embedding
+Ollama Embeddings > PostgreSQL: pgvector search/store
+
+// RAG retrieval
+Analyze Prompt > Knowledge Layer: retrieve_context()
+Generate Improvements > Knowledge Layer: retrieve_context()
+
+// Configuration
+LangGraph Agent > Config Layer: Load criteria + weights
+
+// Results back
+LangGraph Agent > Chainlit UI: Evaluation results
+Chainlit UI > User: Scores, analysis, improvements

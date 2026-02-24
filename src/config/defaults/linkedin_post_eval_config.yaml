@@ -1,0 +1,35 @@
+evaluation:
+  dimensions:
+    task:
+      weight: 0.25
+      sub_criteria:
+        - post_objective_defined
+        - writing_voice_specified
+        - content_format_specified
+        - call_to_action_defined
+    context:
+      weight: 0.35
+      sub_criteria:
+        - target_audience_specified
+        - author_identity_defined
+        - industry_topic_context
+        - platform_awareness
+    references:
+      weight: 0.15
+      sub_criteria:
+        - inspiration_posts_provided
+        - data_statistics_referenced
+        - expertise_basis_specified
+    constraints:
+      weight: 0.25
+      sub_criteria:
+        - length_formatting_constraints
+        - tone_boundaries
+        - content_exclusions
+        - hashtag_mention_requirements
+
+  grading_scale:
+    excellent: 85
+    good: 65
+    needs_work: 40
+    weak: 0

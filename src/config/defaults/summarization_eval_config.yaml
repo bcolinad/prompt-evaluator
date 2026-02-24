@@ -1,0 +1,35 @@
+evaluation:
+  dimensions:
+    task:
+      weight: 0.25
+      sub_criteria:
+        - content_scope_specified
+        - format_and_tone_defined
+        - output_length_specified
+        - persona_or_reading_level
+    context:
+      weight: 0.25
+      sub_criteria:
+        - source_document_described
+        - audience_for_summary
+        - summary_purpose
+        - domain_specificity
+    references:
+      weight: 0.30
+      sub_criteria:
+        - source_material_provided
+        - example_summary_with_source
+        - key_sections_identified
+    constraints:
+      weight: 0.20
+      sub_criteria:
+        - length_word_limits
+        - inclusion_requirements
+        - hallucination_safeguards
+        - exclusion_constraints
+
+  grading_scale:
+    excellent: 85
+    good: 65
+    needs_work: 40
+    weak: 0

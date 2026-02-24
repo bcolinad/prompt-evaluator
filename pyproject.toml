@@ -1,0 +1,131 @@
+[project]
+name = "prompt-evaluator"
+version = "0.1.0"
+description = "A conversational AI agent that evaluates prompts against Google's T.C.R.E.I. framework using LangGraph, LangChain, and LangSmith"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+authors = [{ name = "Brandon", email = "brandon@innovacores.dev" }]
+
+dependencies = [
+    # Core agent stack
+    "langchain>=0.3.0",
+    "langchain-anthropic>=0.3.0",
+    "langgraph>=0.2.0",
+    "langsmith>=0.2.0",
+    # Chat UI
+    "chainlit>=2.0.0",
+    # Database
+    "sqlalchemy[asyncio]>=2.0.0",
+    "asyncpg>=0.30.0",
+    "alembic>=1.14.0",
+    # Configuration
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "pyyaml>=6.0",
+    # Utilities
+    "python-dotenv>=1.0.0",
+    "rich>=13.0.0",
+    "httpx>=0.27.0",
+    "psycopg2-binary>=2.9.11",
+    "langchain-text-splitters>=0.3.0",
+    # Embeddings (Ollama — self-hosted, free)
+    "pgvector>=0.3.0",
+    "langchain-ollama>=0.3.0",
+    "langchain-google-genai>=4.2.1",
+    "langchain-google-vertexai>=3.2.2",
+    "langchain-community>=0.4.1",
+    # Document processing
+    "pypdf>=4.0.0",
+    "docx2txt>=0.8",
+    "openpyxl>=3.1.0",
+    "python-pptx>=0.6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "pytest-mock>=3.14.0",
+    "ruff>=0.8.0",
+    "mypy>=1.13.0",
+    "pre-commit>=4.0.0",
+]
+ocr = [
+    "pdfplumber>=0.11.0",
+    "pymupdf>=1.24.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+# ── Ruff ──────────────────────────────────────────────
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",     # pycodestyle errors
+    "W",     # pycodestyle warnings
+    "F",     # pyflakes
+    "I",     # isort
+    "N",     # pep8-naming
+    "UP",    # pyupgrade
+    "B",     # flake8-bugbear
+    "SIM",   # flake8-simplify
+    "TCH",   # flake8-type-checking
+    "RUF",   # ruff-specific
+]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["src"]
+
+# ── Pytest ────────────────────────────────────────────
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = "-v --tb=short --strict-markers"
+markers = [
+    "unit: Unit tests (no external dependencies)",
+    "integration: Integration tests (requires DB/API)",
+    "slow: Slow tests (LLM calls)",
+]
+
+# ── Coverage ──────────────────────────────────────────
+[tool.coverage.run]
+source = ["src"]
+omit = ["src/cli.py", "src/app.py"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.",
+]
+
+# ── MyPy ──────────────────────────────────────────────
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = ["chainlit.*", "langchain.*", "langgraph.*", "langsmith.*", "pgvector.*", "langchain_ollama.*", "docx2txt.*", "openpyxl.*", "pptx.*", "pdfplumber.*", "fitz.*"]
+ignore_missing_imports = true
+
+[tool.uv.workspace]
+members = [
+    "professional-prompt-shaper",
+]

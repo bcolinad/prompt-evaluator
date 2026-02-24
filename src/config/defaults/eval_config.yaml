@@ -1,0 +1,35 @@
+evaluation:
+  dimensions:
+    task:
+      weight: 0.30
+      sub_criteria:
+        - clear_action_verb
+        - specific_deliverable
+        - persona_defined
+        - output_format_specified
+    context:
+      weight: 0.25
+      sub_criteria:
+        - background_provided
+        - audience_defined
+        - goals_stated
+        - domain_specificity
+    references:
+      weight: 0.20
+      sub_criteria:
+        - examples_included
+        - structured_references
+        - reference_labeling
+    constraints:
+      weight: 0.25
+      sub_criteria:
+        - scope_boundaries
+        - format_constraints
+        - length_limits
+        - exclusions_defined
+
+  grading_scale:
+    excellent: 85
+    good: 65
+    needs_work: 40
+    weak: 0

@@ -1,0 +1,139 @@
+// Prompt Evaluator — Data Flow Diagram
+// Paste this into https://app.eraser.io/workspace/new?template=diagram
+
+// ── Chainlit UI ─────────────────────────────────────
+Real-Time Steps [icon: loader, color: purple, label: "Real-Time Steps\n─────────\n• astream(updates)\n• cl.Step per node\n• Live summaries"]
+
+HTML Dashboard [icon: layout, color: amber, label: "HTML Dashboard\n─────────\n• Header card (scores)\n• Structural Scorecard\n• Quality Analysis\n• Optimized Prompt\n• cl.File attachment"]
+
+// ── Input ────────────────────────────────────────────
+User Prompt [icon: edit-3, color: blue]
+System Prompt [icon: terminal, color: cyan]
+Expected Outcome [icon: target, color: cyan]
+
+// ── Processing Pipeline ──────────────────────────────
+Mode Router [icon: git-branch, color: indigo]
+
+RAG Retrieval [icon: book-open, color: teal, label: "RAG Retrieval\n─────────\n• Query vector store\n• T.C.R.E.I. framework\n• Scoring guides\n• Domain configs"]
+
+Chunking Gate [icon: scissors, color: cyan, label: "Chunking Gate\n─────────\n• Token estimate ≥ 2000?\n• Detect sections\n• Markdown/XML split\n• Paragraph fallback"]
+
+Task Analysis [icon: check-circle, color: green, label: "Task Analysis\n─────────\n• Action verb detection\n• Deliverable specificity\n• Persona detection\n• Format detection"]
+
+Context Analysis [icon: layers, color: blue, label: "Context Analysis\n─────────\n• Background info\n• Audience definition\n• Goals stated\n• Domain specificity"]
+
+References Analysis [icon: book-open, color: purple, label: "References Analysis\n─────────\n• Examples included\n• Structured refs\n• Reference labeling"]
+
+Constraints Analysis [icon: lock, color: orange, label: "Constraints Analysis\n─────────\n• Scope boundaries\n• Format constraints\n• Length limits\n• Exclusions"]
+
+Chunk Aggregation [icon: layers, color: cyan, label: "Chunk Aggregation\n─────────\n• Token-weighted avg\n• Sub-criteria dedup\n• OR-merge flags"]
+
+Weighted Scorer [icon: calculator, color: amber, label: "Weighted Scorer\n─────────\nTask: 30%\nContext: 25%\nReferences: 20%\nConstraints: 25%"]
+
+Improvement Engine [icon: zap, color: red, label: "Improvement Engine (ToT)\n─────────\n• Tree-of-Thought exploration\n• Multi-branch generation\n• Branch selection + synthesis\n• Priority assignment\n• Full prompt rewrite\n• Incorporates output quality findings"]
+
+// ── Output Evaluation Pipeline ──────────────────────
+Output Runner [icon: play, color: teal, label: "Output Runner (Nx)\n─────────\n• Execute prompt via LLM\n• N concurrent runs (2-5)\n• Aggregate outputs"]
+
+Output Judge [icon: shield, color: emerald, label: "Output Judge\n─────────\n• LLM-as-Judge scoring\n• 5 quality dimensions\n• Per-dimension recommendations\n• LangSmith feedback"]
+
+// ── Optimized Prompt Pipeline ───────────────────────
+Optimized Runner [icon: play, color: lime, label: "Optimized Runner (Nx)\n─────────\n• Execute rewritten prompt\n• N concurrent runs (2-5)\n• Aggregate outputs"]
+
+Optimized Judge [icon: shield, color: emerald, label: "Optimized Output Judge\n─────────\n• LLM-as-Judge scoring\n• Same 5 quality dimensions\n• Compare vs original"]
+
+// ── Always-Enhanced Pipeline ────────────────────────
+// CoT, ToT, and Meta-Evaluation are always active for every evaluation.
+// No strategy selector — enhanced techniques are mandatory.
+
+// ── Meta Evaluation ─────────────────────────────────
+Meta Evaluator [icon: shield-check, color: pink, label: "Meta Evaluator (always)\n─────────\n• Self-assessment pass\n• Accuracy score\n• Completeness score\n• Actionability score\n• Faithfulness score\n• Overall confidence"]
+
+// ── Combined Report ─────────────────────────────────
+Full Report [icon: bar-chart-2, color: green, label: "FullEvaluationReport\n─────────\n• Structure scores\n• Original output scores\n• Optimized output scores\n• Quality comparison delta\n• CoT reasoning trace\n• ToT branches data\n• Meta-assessment (always)\n• Rewritten prompt"]
+
+// ── Embedding Pipeline ────────────────────────────────
+Embedding Search [icon: search, color: pink, label: "Embedding Search\n─────────\n• Query pgvector\n• Cosine similarity\n• Per-user filtering\n• Historical context"]
+
+Embedding Storage [icon: save, color: pink, label: "Embedding Storage\n─────────\n• Vectorize evaluation\n• Store in pgvector\n• Fire-and-forget"]
+
+Recommendations [icon: list, color: pink, label: "Recommendations UI\n─────────\n• Similar Past Evaluations\n• Scores + grades\n• Similarity percentage"]
+
+// ── Storage ──────────────────────────────────────────
+PostgreSQL [icon: database, color: blue, label: "PostgreSQL\n(+ pgvector)"]
+LangSmith Traces [icon: activity, color: green]
+
+// ── Connections ──────────────────────────────────────
+
+User Prompt > Mode Router
+System Prompt > Mode Router
+Expected Outcome > Mode Router
+
+Mode Router > RAG Retrieval: retrieve context
+RAG Retrieval > Chunking Gate: pass context
+Chunking Gate > Task Analysis: per chunk or full
+Chunking Gate > Context Analysis
+Chunking Gate > References Analysis
+Chunking Gate > Constraints Analysis
+
+Task Analysis > Chunk Aggregation
+Context Analysis > Chunk Aggregation
+References Analysis > Chunk Aggregation
+Constraints Analysis > Chunk Aggregation
+
+Chunk Aggregation > Weighted Scorer: aggregated scores
+Weighted Scorer > Output Runner: Full mode
+Weighted Scorer > Improvement Engine: Structure mode
+
+RAG Retrieval > Improvement Engine: pass context
+Output Runner > Output Judge
+Output Judge > Improvement Engine: Full mode (quality findings)
+Output Judge > Full Report: Output-only mode
+
+// Optimized prompt pipeline (after improvements)
+Improvement Engine > Optimized Runner: rewritten_prompt exists
+Optimized Runner > Optimized Judge
+Optimized Judge > Meta Evaluator: always
+
+// Fallback: no rewritten prompt
+Improvement Engine > Meta Evaluator: no rewritten_prompt
+
+// Meta always flows to report
+Meta Evaluator > Full Report: meta_assessment + findings
+
+// Embedding retrieval (before analysis)
+Mode Router > Embedding Search: find similar evaluations
+Embedding Search > Task Analysis: inject historical context
+Embedding Search > Improvement Engine: historical improvements
+
+// Embedding storage (after report)
+Full Report > Embedding Storage: vectorize evaluation
+Embedding Storage > PostgreSQL: persist embedding
+
+// Recommendations UI
+Embedding Search > Recommendations: similar evaluations
+Recommendations > HTML Dashboard: display panel
+
+Full Report > PostgreSQL: persist
+Full Report > LangSmith Traces: trace
+
+// ── LLM Provider Cascade ───────────────────────────
+LLM Cascade [icon: cpu, color: indigo, label: "LLM Provider Cascade\n─────────\n1. Google Gemini (primary)\n2. Anthropic Claude (fallback)\n3. Ollama Qwen 3 4B (self-hosted)"]
+
+Task Analysis > LLM Cascade: LLM evaluation (CoT)
+Output Runner > LLM Cascade: Execute prompt (Nx)
+Output Judge > LLM Cascade: LLM-as-Judge
+Improvement Engine > LLM Cascade: Generate improvements (ToT)
+Optimized Runner > LLM Cascade: Execute optimized prompt (Nx)
+Optimized Judge > LLM Cascade: LLM-as-Judge (optimized)
+
+// ── Follow-up Loop ──────────────────────────────────
+Follow-up Handler [icon: refresh-cw, color: purple, label: "Follow-up Handler\n─────────\n• Classify intent\n• explain / adjust\n• re-evaluate / mode switch"]
+
+Full Report > Follow-up Handler: user asks follow-up
+Follow-up Handler > Mode Router: re_evaluate intent
+
+// ── Chainlit UI Flow ───────────────────────────────
+User Prompt > Real-Time Steps: paste prompt
+Mode Router > Real-Time Steps: stream node updates
+Full Report > HTML Dashboard: generate report
