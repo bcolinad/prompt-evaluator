@@ -13,7 +13,7 @@ An AI-powered prompt quality assurance platform built on the **T.C.R.E.I.** fram
 
 **Demo**
 
-https://streamable.com/zrvd22
+https://github.com/user-attachments/assets/4b5e898b-41bd-440d-8433-6afd19c7b2a3
 
 </div>
 
