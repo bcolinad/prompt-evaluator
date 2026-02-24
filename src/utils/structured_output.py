@@ -8,6 +8,9 @@ Provides ``invoke_structured()`` which uses the best strategy per provider:
   with thinking enabled + JSON extraction + ``model_validate()``.
 - **Other models** (Anthropic, OpenAI): Tries ``with_structured_output()``
   first (tool-use / function-calling), then falls back to JSON extraction.
+
+Also provides ``invoke_plain_text()`` for cases where the response is raw
+text (e.g. a rewritten prompt) rather than structured JSON.
 """
 
 from __future__ import annotations
@@ -282,3 +285,32 @@ async def invoke_structured(
 
     # Fallback: raw invocation + JSON extraction
     return await _invoke_json_fallback(llm, prompt, variables, schema)
+
+
+async def invoke_plain_text(
+    llm: BaseChatModel,
+    prompt: ChatPromptTemplate,
+    variables: dict,
+) -> str | None:
+    """Invoke an LLM and return the raw text response (no JSON parsing).
+
+    Useful when the expected output is free-form text (e.g. a rewritten
+    prompt) rather than structured JSON.  A partial/truncated response is
+    still returned as-is — the caller decides if it's acceptable.
+
+    Args:
+        llm: The LangChain chat model instance.
+        prompt: The chat prompt template to use.
+        variables: Template variables to pass to the prompt.
+
+    Returns:
+        The extracted text content, or ``None`` if the call fails entirely.
+    """
+    try:
+        chain = prompt | llm
+        response = await chain.ainvoke(variables)
+        content = _extract_text_content(response)
+        return content.strip() if content else None
+    except Exception as exc:
+        logger.warning("Plain text invocation failed: %s", exc)
+        return None

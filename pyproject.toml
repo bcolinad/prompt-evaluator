@@ -93,6 +93,10 @@ known-first-party = ["src"]
 testpaths = ["tests"]
 asyncio_mode = "auto"
 addopts = "-v --tb=short --strict-markers"
+filterwarnings = [
+    "ignore::DeprecationWarning:traceloop.*",
+    "ignore::DeprecationWarning:google.*",
+]
 markers = [
     "unit: Unit tests (no external dependencies)",
     "integration: Integration tests (requires DB/API)",

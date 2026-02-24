@@ -28,9 +28,13 @@ from src.prompts.registry import get_prompts_for_task_type
 from src.prompts.strategies.tot import TOT_BRANCH_GENERATION_PROMPT, TOT_BRANCH_SELECTION_PROMPT
 from src.rag.knowledge_store import retrieve_context
 from src.utils.llm_factory import get_llm
-from src.utils.structured_output import invoke_structured
+from src.utils.structured_output import invoke_plain_text, invoke_structured
 
 logger = logging.getLogger(__name__)
+
+# Prompts larger than this (chars) use the two-phase strategy to avoid
+# LLM output truncation when generating the rewritten prompt inside JSON.
+_LARGE_PROMPT_THRESHOLD = 8000
 
 
 def _format_historical_improvements(similar_evals: list[dict]) -> str:
@@ -211,12 +215,170 @@ async def _generate_tot_improvements(
         return None
 
 
+async def _generate_rewrite_plain_text(
+    llm: object,
+    input_text: str,
+    improvements: list[Improvement],
+    analysis_summary: str,
+) -> str | None:
+    """Generate a rewritten prompt as plain text (no JSON wrapping).
+
+    This avoids the JSON truncation problem for large prompts: even if the
+    LLM output is partially truncated, the text is still usable because
+    there is no JSON structure to break.
+
+    Args:
+        llm: The LangChain chat model instance.
+        input_text: The original prompt text.
+        improvements: The list of improvements to incorporate.
+        analysis_summary: Formatted dimension scores summary.
+
+    Returns:
+        The rewritten prompt text, or None on failure.
+    """
+    improvements_text = "\n".join(
+        f"- [{imp.priority.value}] {imp.title}: {imp.suggestion}"
+        for imp in improvements
+    )
+
+    prompt = ChatPromptTemplate.from_messages([
+        SystemMessage(content=(
+            "You are an expert prompt engineer. Rewrite the user's prompt "
+            "incorporating ALL the improvements listed below. Output ONLY the "
+            "rewritten prompt — no explanations, no JSON, no markdown fences."
+        )),
+        ("human", (
+            "Original prompt:\n{input_text}\n\n"
+            "Analysis:\n{analysis_summary}\n\n"
+            "Improvements to apply:\n{improvements_text}\n\n"
+            "Write the complete improved prompt below:"
+        )),
+    ])
+
+    return await invoke_plain_text(
+        llm, prompt,
+        {
+            "input_text": input_text,
+            "analysis_summary": analysis_summary,
+            "improvements_text": improvements_text,
+        },
+    )
+
+
+async def _generate_large_prompt_improvements(
+    llm: object,
+    input_text: str,
+    analysis_summary: str,
+    overall_score: int,
+    grade: str,
+    output_quality_section: str,
+    rag_section: str,
+    prompt_type_guidance: str,
+) -> dict:
+    """Two-phase improvement generation for large prompts.
+
+    Phase 1: Get improvements only as JSON (small output, always fits).
+    Phase 2: Generate the rewritten prompt as plain text (no JSON wrapper,
+             so partial output is still usable).
+
+    Args:
+        llm: The LangChain chat model instance.
+        input_text: The original prompt text.
+        analysis_summary: Formatted dimension scores summary.
+        overall_score: The overall evaluation score.
+        grade: The evaluation grade string.
+        output_quality_section: Formatted output quality summary.
+        rag_section: RAG context section.
+        prompt_type_guidance: Prompt-type specific guidance text.
+
+    Returns:
+        Dict with ``improvements`` and ``rewritten_prompt``.
+    """
+    # Phase 1: Get improvements only (instruct LLM to skip rewrite)
+    logger.info(
+        "Large prompt detected (%d chars) — using two-phase improvement strategy",
+        len(input_text),
+    )
+    improvements_only_prompt = ChatPromptTemplate.from_messages([
+        SystemMessage(content=(
+            "You are an expert prompt engineer. Given a prompt and its "
+            "T.C.R.E.I. analysis, generate ONLY improvement suggestions.\n\n"
+            f"{rag_section}\n\n{prompt_type_guidance}\n\n"
+            "Based on the analysis, generate prioritized improvements:\n"
+            "- CRITICAL: Missing core components\n"
+            "- HIGH: Important missing elements\n"
+            "- MEDIUM: Enhancements that improve quality\n"
+            "- LOW: Polish and optimization\n\n"
+            "If Output Quality Analysis data is provided, incorporate those "
+            "findings into your improvements.\n\n"
+            "Respond with ONLY valid JSON (no markdown):\n"
+            '{{\n    "improvements": [\n'
+            '        {{"priority": "CRITICAL|HIGH|MEDIUM|LOW", '
+            '"title": "<short title>", '
+            '"suggestion": "<specific actionable suggestion>"}}\n'
+            "    ],\n"
+            '    "rewritten_prompt": null\n'
+            "}}"
+        )),
+        ("human", (
+            "Original prompt:\n```\n{input_text}\n```\n\n"
+            "Analysis results:\n{analysis_summary}\n\n"
+            "Overall score: {overall_score}/100 ({grade})\n\n"
+            "Output Quality Analysis:\n{output_quality_section}\n\n"
+            "Generate improvement suggestions only (no rewritten prompt)."
+        )),
+    ])
+
+    llm_result = await invoke_structured(
+        llm, improvements_only_prompt,
+        {
+            "input_text": input_text,
+            "analysis_summary": analysis_summary,
+            "overall_score": overall_score,
+            "grade": grade,
+            "output_quality_section": output_quality_section,
+        },
+        ImprovementsLLMResponse,
+    )
+
+    if llm_result is not None and llm_result.improvements:
+        improvements = [
+            Improvement(
+                priority=Priority(imp.priority),
+                title=imp.title,
+                suggestion=imp.suggestion,
+            )
+            for imp in llm_result.improvements
+        ]
+        logger.info("Phase 1 complete: %d improvements generated", len(improvements))
+    else:
+        logger.warning("Phase 1 failed — no improvements generated for large prompt")
+        return {"improvements": [], "rewritten_prompt": None}
+
+    # Phase 2: Generate rewrite as plain text (no JSON = no truncation breakage)
+    rewritten = await _generate_rewrite_plain_text(
+        llm, input_text, improvements, analysis_summary,
+    )
+    if rewritten:
+        logger.info("Phase 2 complete: rewritten prompt generated (%d chars)", len(rewritten))
+    else:
+        logger.warning("Phase 2 failed — rewritten prompt could not be generated")
+
+    return {
+        "improvements": improvements,
+        "rewritten_prompt": rewritten,
+    }
+
+
 async def generate_improvements(state: AgentState) -> dict:
     """Generate prioritized improvements and a rewritten prompt.
 
     Uses the analysis results to identify gaps and produce:
     1. A prioritized list of specific, actionable improvements
     2. A complete rewritten prompt incorporating all improvements
+
+    For large prompts (>{_LARGE_PROMPT_THRESHOLD} chars), uses a two-phase
+    strategy: improvements as JSON first, then rewrite as plain text.
 
     Args:
         state: Current agent state with dimension_scores, input_text, etc.
@@ -280,43 +442,80 @@ async def generate_improvements(state: AgentState) -> dict:
             )),
         ])
 
-        # Always use Tree-of-Thought for improvement generation
-        strategy = state.get("strategy")
-        tot_num_branches = strategy.tot_num_branches if strategy else 3
-        tot_result = await _generate_tot_improvements(
-            llm,
-            input_text=state["input_text"],
-            analysis_summary=analysis_summary,
-            overall_score=overall_score,
-            grade=grade,
-            output_quality_section=output_quality_section,
-            num_branches=tot_num_branches,
-        )
-
+        input_text = state["input_text"]
         tot_branches_data = None
-        if tot_result is not None:
-            result = tot_result
-            tot_branches_data = tot_result.get("tot_branches_data")
-        else:
-            # Standard single-shot improvement path
-            llm_result = await invoke_structured(
+
+        if len(input_text) > _LARGE_PROMPT_THRESHOLD:
+            # Large prompt: two-phase approach (improvements JSON + rewrite
+            # as plain text) to avoid output truncation breaking JSON.
+            result = await _generate_large_prompt_improvements(
                 llm,
-                prompt,
-                {
-                    "input_text": state["input_text"],
-                    "analysis_summary": analysis_summary,
-                    "overall_score": overall_score,
-                    "grade": grade,
-                    "output_quality_section": output_quality_section,
-                },
-                ImprovementsLLMResponse,
+                input_text=input_text,
+                analysis_summary=analysis_summary,
+                overall_score=overall_score,
+                grade=grade,
+                output_quality_section=output_quality_section,
+                rag_section=rag_section,
+                prompt_type_guidance=prompt_type_guidance,
+            )
+        else:
+            # Normal prompt: use Tree-of-Thought
+            strategy = state.get("strategy")
+            tot_num_branches = strategy.tot_num_branches if strategy else 3
+            tot_result = await _generate_tot_improvements(
+                llm,
+                input_text=input_text,
+                analysis_summary=analysis_summary,
+                overall_score=overall_score,
+                grade=grade,
+                output_quality_section=output_quality_section,
+                num_branches=tot_num_branches,
             )
 
-            if llm_result is not None:
-                result = _map_improvements_response(llm_result)
+            if tot_result is not None:
+                result = tot_result
+                tot_branches_data = tot_result.get("tot_branches_data")
             else:
-                logger.warning("All parsing attempts failed for improvements — using empty fallback")
-                result = {"improvements": [], "rewritten_prompt": None}
+                # Standard single-shot improvement path
+                llm_result = await invoke_structured(
+                    llm,
+                    prompt,
+                    {
+                        "input_text": input_text,
+                        "analysis_summary": analysis_summary,
+                        "overall_score": overall_score,
+                        "grade": grade,
+                        "output_quality_section": output_quality_section,
+                    },
+                    ImprovementsLLMResponse,
+                )
+
+                if llm_result is not None:
+                    result = _map_improvements_response(llm_result)
+                else:
+                    logger.warning("All parsing attempts failed for improvements — using empty fallback")
+                    result = {"improvements": [], "rewritten_prompt": None}
+
+        # Detect when optimization completely failed
+        has_improvements = bool(result.get("improvements"))
+        has_rewrite = bool(result.get("rewritten_prompt"))
+        if has_improvements or has_rewrite:
+            strategy_label = "two-phase" if len(input_text) > _LARGE_PROMPT_THRESHOLD else "ToT"
+            step_message = f"Improvements generated ({strategy_label}) — here are your results."
+        else:
+            input_len = len(state.get("input_text", ""))
+            logger.warning(
+                "No improvements or rewritten prompt produced (input_length=%d). "
+                "Likely caused by LLM output truncation on a very large prompt.",
+                input_len,
+            )
+            step_message = (
+                "Optimization was not possible for this prompt. "
+                "The prompt is too long for the LLM to generate a complete "
+                "rewritten version within its output limits. "
+                "The analysis and scoring above are still valid. "
+                "Try shortening your prompt or splitting it into smaller sections."
+            )
 
         return {
             "improvements": result["improvements"],
@@ -325,9 +524,7 @@ async def generate_improvements(state: AgentState) -> dict:
             "tot_branches_data": tot_branches_data,
             "current_step": "improvements_complete",
             "should_continue": False,
-            "messages": [
-                AIMessage(content="✨ Improvements generated (ToT) — here are your results.")
-            ],
+            "messages": [AIMessage(content=step_message)],
         }
 
     except Exception as exc:
