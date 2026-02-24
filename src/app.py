@@ -607,15 +607,26 @@ async def on_message(message: cl.Message) -> None:
         await _handle_chat_message(augmented_input, image_blocks=image_blocks)
         return
 
-    # Mode switch commands
-    if "system prompt mode" in user_input.lower():
+    # Mode switch commands — only trigger on short, intentional command phrases
+    lower_input = user_input.lower().strip()
+    mode_switch_to_system = [
+        "switch to system prompt mode",
+        "enable system prompt mode",
+        "system prompt mode",
+    ]
+    mode_switch_to_prompt = [
+        "switch to prompt mode",
+        "enable prompt mode",
+        "prompt mode",
+    ]
+    if lower_input in mode_switch_to_system:
         cl.user_session.set("mode", EvalMode.SYSTEM_PROMPT)  # type: ignore[no-untyped-call]
         await cl.Message(  # type: ignore[no-untyped-call]
             content="Switched to **System Prompt Evaluation** mode. Paste your system prompt.",
         ).send()
         return
 
-    if "prompt mode" in user_input.lower() and "system" not in user_input.lower():
+    if lower_input in mode_switch_to_prompt:
         cl.user_session.set("mode", EvalMode.PROMPT)  # type: ignore[no-untyped-call]
         await cl.Message(  # type: ignore[no-untyped-call]
             content="Switched to **Prompt Evaluation** mode. Paste a prompt.",
@@ -628,9 +639,9 @@ async def on_message(message: cl.Message) -> None:
 
     mode: EvalMode = cl.user_session.get("mode", EvalMode.PROMPT)  # type: ignore[no-untyped-call]
 
-    # Auto-detect system prompt markers
+    # Auto-detect system prompt markers in longer inputs that contain actual content
     system_signals = ["system prompt", "system message", "system instruction"]
-    if any(s in user_input.lower() for s in system_signals):
+    if any(s in lower_input for s in system_signals):
         mode = EvalMode.SYSTEM_PROMPT
         cl.user_session.set("mode", mode)  # type: ignore[no-untyped-call]
 
