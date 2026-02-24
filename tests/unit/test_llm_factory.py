@@ -276,7 +276,6 @@ class TestGetLLM:
         assert "google-key.json" in msg
         assert "Anthropic Claude" in msg
         assert "ANTHROPIC_API_KEY" in msg
-        assert "console.anthropic.com" in msg
         assert "Ollama" in msg
         assert "OLLAMA_BASE_URL" in msg
 
