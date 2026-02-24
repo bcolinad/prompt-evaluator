@@ -41,7 +41,7 @@ updates:
 
   # Docker (docker-compose.yml)
   - package-ecosystem: "docker"
-    directory: "/docker"
+    directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"

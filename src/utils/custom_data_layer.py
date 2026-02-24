@@ -49,7 +49,7 @@ class CustomDataLayer(ChainlitDataLayer):
         """
         thread = await super().get_thread(thread_id)
         if thread is not None and not thread.get("userIdentifier"):
-            logger.warning(
+            logger.debug(
                 "Thread %s has no userIdentifier — returning None to avoid "
                 "authorization error (orphaned thread from anonymous/pre-auth session)",
                 thread_id,

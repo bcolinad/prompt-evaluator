@@ -19,9 +19,13 @@ from langchain_core.language_models.chat_models import BaseChatModel
 
 logger = logging.getLogger(__name__)
 
-# Resolved once at import time — points at src/agent/nodes/google-key.json
-_GOOGLE_KEY_PATH = (
-    Path(__file__).resolve().parent.parent / "agent" / "nodes" / "google-key.json"
+# Honour GOOGLE_APPLICATION_CREDENTIALS when already set (e.g. Docker mount),
+# otherwise fall back to the repo-local path next to the agent nodes.
+_GOOGLE_KEY_PATH = Path(
+    os.environ.get(
+        "GOOGLE_APPLICATION_CREDENTIALS",
+        str(Path(__file__).resolve().parent.parent / "agent" / "nodes" / "google-key.json"),
+    )
 )
 
 

@@ -134,10 +134,16 @@ uv sync                      # Install dependencies
 uv sync --group dev          # Install with dev dependencies
 cp .env.example .env         # Configure environment
 
-# Development
-make docker-up               # Start PostgreSQL
+# Development (local Python)
+make docker-up               # Start PostgreSQL + Ollama + pgAdmin
 make migrate                 # Run database migrations
-make dev                     # Start Chainlit dev server
+make dev                     # Start Chainlit dev server (local)
+
+# Docker full stack (app + infrastructure in Docker)
+make docker-dev              # Dev mode: hot-reload (-w), source mounted
+make docker-dev-down         # Stop dev containers
+make docker-prod             # Production mode: optimized image, detached
+make docker-prod-down        # Stop production containers
 
 # Quality
 make test                    # Run tests with coverage

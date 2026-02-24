@@ -9,6 +9,14 @@ An AI-powered prompt quality assurance platform built on the **T.C.R.E.I.** fram
 [![Built with LangGraph](https://img.shields.io/badge/Built%20with-LangGraph-purple.svg)](https://langchain-ai.github.io/langgraph/)
 [![Google Prompting Certified](https://img.shields.io/badge/Google-Prompting%20Essentials-4285F4.svg)](https://www.skills.google/paths/2337)
 
+<div align="center">
+
+**Demo**
+
+https://streamable.com/zrvd22
+
+</div>
+
 ---
 
 ## Table of Contents
@@ -421,6 +429,44 @@ make setup    # Installs deps, copies .env, starts DB, runs migrations
 make dev      # Start the app
 ```
 
+### Docker Deployment (Full Stack)
+
+Run the entire application — including the Chainlit app — inside Docker. No local Python or uv required (only Docker).
+
+#### Development (with hot reload)
+
+Source code is mounted into the container. Chainlit runs with `-w` (watch mode) so changes to `src/` are picked up automatically.
+
+```bash
+# 1. Create your .env (if not done already)
+cp .env.example .env
+# Edit .env with your API keys
+
+# 2. Start everything (app + PostgreSQL + Ollama + pgAdmin)
+make docker-dev
+
+# 3. Open http://localhost:8000
+```
+
+Edit files locally — the running container picks up changes via the volume mount and Chainlit's watch mode.
+
+To stop: `make docker-dev-down`
+
+#### Production
+
+The app is baked into an optimized image (no source mounts, no watch mode). The container restarts automatically on failure.
+
+```bash
+# Build and start in detached mode
+make docker-prod
+
+# Open http://localhost:8000
+```
+
+To stop: `make docker-prod-down`
+
+> **Note:** Both profiles start the infrastructure services (PostgreSQL, Ollama, pgAdmin) alongside the app. The `DATABASE_URL` and `OLLAMA_BASE_URL` are automatically overridden inside Docker to use internal container networking — no manual changes to `.env` needed.
+
 ---
 
 ## Usage Instructions
@@ -634,8 +680,10 @@ prompt-evaluator/
 ├── .claude/                        # Claude Code configuration
 │   ├── settings.json
 │   └── commands/                   # Slash commands: /test, /lint, /dev, /migrate, /doc
+├── Dockerfile                         # Multi-stage build (dev + production targets)
+├── .dockerignore                      # Docker build context exclusions
 ├── docker/
-│   ├── docker-compose.yml          # PostgreSQL + pgAdmin + Ollama
+│   ├── docker-compose.yml          # PostgreSQL + pgAdmin + Ollama + app (dev/prod profiles)
 │   └── init.sql                    # Database schema with pgvector
 ├── alembic.ini                        # Alembic configuration
 ├── alembic/
@@ -831,8 +879,19 @@ prompt-evaluator/
 ### Commands
 
 ```bash
-# Start the application
+# Start the application (local Python, requires 'make docker-up' first)
 make dev              # Launches Chainlit with hot reload on localhost:8000
+
+# Docker — full stack (app + all infrastructure in Docker)
+make docker-dev       # Build & start everything with hot-reload (-w), source mounted
+make docker-dev-down  # Stop dev containers
+make docker-prod      # Build & start production stack (detached, no watch, restart policy)
+make docker-prod-down # Stop production containers
+
+# Docker — infrastructure only (for local Python development)
+make docker-up        # Start PostgreSQL + pgAdmin + Ollama containers, pull embedding model
+make docker-down      # Stop infrastructure containers
+make docker-reset     # Reset database (destroys all data)
 
 # Testing
 make test             # Run all tests with 80% coverage enforcement
@@ -846,11 +905,6 @@ make format           # Auto-format with Ruff
 # Database
 make migrate          # Run pending Alembic migrations
 make migration        # Create a new migration from model changes
-
-# Infrastructure
-make docker-up        # Start PostgreSQL + pgAdmin + Ollama containers, pull embedding model
-make docker-down      # Stop containers
-make docker-reset     # Reset database (destroys all data)
 
 # Maintenance
 make clean            # Remove __pycache__, .pytest_cache, coverage artifacts

@@ -1,4 +1,4 @@
-.PHONY: setup dev test lint format migrate docker-up docker-down clean clean-chainlit
+.PHONY: setup dev test lint format migrate docker-up docker-down docker-reset docker-dev docker-prod docker-dev-down docker-prod-down clean
 
 # ── Setup ─────────────────────────────────────────────
 setup: docker-up
@@ -7,7 +7,7 @@ setup: docker-up
 	uv run alembic upgrade head
 	@echo "✅ Setup complete. Run 'make dev' to start."
 
-# ── Docker ────────────────────────────────────────────
+# ── Docker (infrastructure only) ─────────────────────
 docker-up:
 	docker compose -f docker/docker-compose.yml down -v && docker compose -f docker/docker-compose.yml up --build
 
@@ -18,7 +18,20 @@ docker-reset:
 	docker compose -f docker/docker-compose.yml down -v
 	docker compose -f docker/docker-compose.yml up -d
 
-# ── Development ───────────────────────────────────────
+# ── Docker (full stack with app) ─────────────────────
+docker-dev:
+	docker compose -f docker/docker-compose.yml --profile dev up --build
+
+docker-dev-down:
+	docker compose -f docker/docker-compose.yml --profile dev down
+
+docker-prod:
+	docker compose -f docker/docker-compose.yml --profile prod up --build -d
+
+docker-prod-down:
+	docker compose -f docker/docker-compose.yml --profile prod down
+
+# ── Development (local, no Docker app) ───────────────
 dev:
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name .pytest_cache -exec rm -rf {} + 2>/dev/null || true

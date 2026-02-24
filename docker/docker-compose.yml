@@ -68,7 +68,68 @@ services:
       postgres:
         condition: service_healthy
 
+  # ── Application (Development) ─────────────────────────
+  # Hot-reload mode: mounts source code and watches for changes (-w)
+  app-dev:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: dev
+    container_name: prompt-evaluator-app-dev
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../src:/app/src
+      - ../public:/app/public
+      - ../run.py:/app/run.py
+      - ../chainlit.md:/app/chainlit.md
+      - ../.chainlit:/app/.chainlit
+      - ../.env:/app/.env
+      - ../alembic.ini:/app/alembic.ini
+      - ../alembic:/app/alembic
+    env_file:
+      - ../.env
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/prompt_evaluator
+      OLLAMA_BASE_URL: http://ollama:11434
+      GOOGLE_APPLICATION_CREDENTIALS: /app/src/agent/nodes/google-key.json
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    profiles:
+      - dev
+
+  # ── Application (Production) ──────────────────────────
+  # Optimized image, no source mounts, no watch mode
+  app-prod:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: production
+    container_name: prompt-evaluator-app-prod
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../.env:/app/.env:ro
+      - ../src/agent/nodes/google-key.json:/app/secrets/google-key.json:ro
+    env_file:
+      - ../.env
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/prompt_evaluator
+      OLLAMA_BASE_URL: http://ollama:11434
+      GOOGLE_APPLICATION_CREDENTIALS: /app/secrets/google-key.json
+      APP_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles:
+      - prod
+
 volumes:
   pgdata:
   ollama_data:
-
