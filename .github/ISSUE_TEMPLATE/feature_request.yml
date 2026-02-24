@@ -1,0 +1,77 @@
+name: Feature Request
+description: Suggest a new feature or enhancement for Prompt Evaluator
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement! Please describe the feature you'd like to see.
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Feature Category
+      description: What area does this feature relate to?
+      options:
+        - Evaluation Framework (T.C.R.E.I. criteria, scoring)
+        - Chat UI / User Experience
+        - New LLM Provider Support
+        - Document Processing / RAG
+        - LangGraph Agent Workflow
+        - Database / History / Analytics
+        - Authentication / Multi-user
+        - Docker / Deployment
+        - API / Integrations
+        - Developer Experience (testing, linting, CLI)
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or Motivation
+      description: What problem does this feature solve? Is it related to a frustration with the current behavior?
+      placeholder: I often need to evaluate prompts in batch but currently can only do one at a time...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the feature you'd like. Be as specific as possible.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Have you considered any alternative solutions or workarounds?
+
+  - type: dropdown
+    id: willingness
+    attributes:
+      label: Would you be willing to contribute this feature?
+      options:
+        - "Yes, I can submit a pull request"
+        - "I can help with testing or documentation"
+        - "No, but I'd like to see it implemented"
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Any other context, mockups, screenshots, or references that help explain the feature.
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Before Submitting
+      options:
+        - label: I searched existing issues and this hasn't been requested yet
+          required: true

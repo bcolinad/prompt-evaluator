@@ -1,0 +1,128 @@
+name: Bug Report
+description: Report a bug or unexpected behavior in Prompt Evaluator
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please fill out the sections below so we can reproduce and fix the issue.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected Component
+      description: Which part of the application is affected?
+      options:
+        - Chat UI (Chainlit)
+        - Prompt Evaluation (T.C.R.E.I. scoring)
+        - System Prompt Evaluation
+        - LangGraph Agent Pipeline
+        - Document Upload / RAG
+        - Database / Migrations
+        - Authentication
+        - Docker / Infrastructure
+        - CLI / Make Commands
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+      placeholder: When I submit a prompt for evaluation, the scoring step...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Step-by-step instructions to reproduce the behavior.
+      placeholder: |
+        1. Start the app with `make dev`
+        2. Submit the following prompt: "..."
+        3. Wait for evaluation to complete
+        4. See error in...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened? Include error messages, screenshots, or logs if available.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: llm-provider
+    attributes:
+      label: LLM Provider
+      description: Which LLM provider were you using when the bug occurred?
+      options:
+        - Google Gemini
+        - Anthropic Claude
+        - Ollama (self-hosted)
+        - Not applicable
+    validations:
+      required: true
+
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment Method
+      description: How are you running the application?
+      options:
+        - Local Python (`make dev`)
+        - Docker Dev (`make docker-dev`)
+        - Docker Production (`make docker-prod`)
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: python-version
+    attributes:
+      label: Python Version
+      description: Output of `python --version`
+      placeholder: "3.12.4"
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating System
+      placeholder: "macOS 15.3 / Ubuntu 24.04 / Windows 11"
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Logs
+      description: Paste any relevant log output. This will be formatted as code automatically.
+      render: shell
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Any other context about the problem (e.g., `.env` configuration changes, custom YAML configs, LangSmith trace links).
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Before Submitting
+      options:
+        - label: I searched existing issues and this hasn't been reported yet
+          required: true
+        - label: I am using the latest version from the `main` branch
+          required: false

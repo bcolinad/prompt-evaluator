@@ -1,0 +1,63 @@
+name: Documentation Issue
+description: Report missing, incorrect, or unclear documentation
+title: "[Docs]: "
+labels: ["documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Help us keep the documentation accurate and useful. Report any gaps or errors you find.
+
+  - type: dropdown
+    id: doc-type
+    attributes:
+      label: Documentation Location
+      description: Which documentation is affected?
+      options:
+        - README.md
+        - ARCHITECTURE.md
+        - SECURITY.md
+        - CLAUDE.md
+        - Eraser.io Diagrams
+        - Database Schema (DBML)
+        - Code Docstrings / Inline Comments
+        - .env.example / Configuration Reference
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: issue-type
+    attributes:
+      label: Issue Type
+      options:
+        - Incorrect or outdated information
+        - Missing documentation
+        - Unclear or confusing explanation
+        - Broken links or references
+        - Typo or formatting issue
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe what is wrong or missing.
+      placeholder: The project structure tree in README.md is missing the new `src/utils/ocr.py` module...
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested Fix
+      description: If you have a suggestion for how to fix it, describe it here.
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Before Submitting
+      options:
+        - label: I verified this against the latest `main` branch
+          required: true
