@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+.uv/
+
+# Environment (secrets — mounted at runtime, not baked into image)
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Testing / quality artifacts
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Database files
+*.db
+*.sqlite3
+
+# Chainlit runtime data
+.chainlit/data/
+.files/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Docs / diagrams (not needed at runtime)
+docs/
+
+# Google credentials (mounted at runtime, not baked into image)
+src/agent/nodes/google-key.json
