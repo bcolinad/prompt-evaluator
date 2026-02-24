@@ -152,6 +152,9 @@ def warmup_knowledge_store() -> None:
         )
 
 
+_MAX_QUERY_CHARS = 6000  # ~1500 tokens — safe for embedding models
+
+
 async def retrieve_context(query: str, top_k: int = 3) -> str:
     """Retrieve relevant knowledge context for a query.
 
@@ -165,7 +168,9 @@ async def retrieve_context(query: str, top_k: int = 3) -> str:
     """
     try:
         store = _get_store()
-        results = store.similarity_search(query, k=top_k)
+        # Truncate long prompts to avoid exceeding embedding model context
+        truncated_query = query[:_MAX_QUERY_CHARS] if len(query) > _MAX_QUERY_CHARS else query
+        results = store.similarity_search(truncated_query, k=top_k)
 
         if not results:
             return ""

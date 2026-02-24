@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
+from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate
 
@@ -20,6 +22,9 @@ from src.rag.knowledge_store import retrieve_context
 from src.utils.chunking import aggregate_dimension_scores, chunk_prompt, should_chunk
 from src.utils.llm_factory import get_llm
 from src.utils.structured_output import invoke_structured
+
+# Max concurrent chunk analysis calls to avoid rate-limiting
+_CHUNK_CONCURRENCY = 5
 
 logger = logging.getLogger(__name__)
 
@@ -88,6 +93,7 @@ async def _analyze_single(
     rag_section: str,
     analysis_prompt: str = "",
     llm_provider: str | None = None,
+    llm: BaseChatModel | None = None,
 ) -> dict:
     """Analyze a single (short) prompt via the LLM.
 
@@ -99,13 +105,15 @@ async def _analyze_single(
         rag_section: RAG knowledge context to inject (may be empty).
         analysis_prompt: Override system prompt template (uses default if empty).
         llm_provider: Explicit LLM provider key (``"google"`` or ``"anthropic"``).
+        llm: Pre-created LLM instance to reuse (avoids re-creation per chunk).
 
     Returns:
         Dict with ``dimensions`` and ``tcrei_flags``.
     """
     from src.prompts.strategies.cot import COT_ANALYSIS_PREAMBLE
 
-    llm = get_llm(llm_provider)
+    if llm is None:
+        llm = get_llm(llm_provider)
     system_prompt = COT_ANALYSIS_PREAMBLE + analysis_prompt
 
     prompt = ChatPromptTemplate.from_messages([
@@ -133,7 +141,8 @@ async def _analyze_chunked(
 ) -> tuple[dict, int]:
     """Analyze a long prompt by chunking it and aggregating results.
 
-    Always applies Chain-of-Thought reasoning to each chunk.
+    Processes chunks concurrently (up to ``_CHUNK_CONCURRENCY`` at a time)
+    and reuses a single LLM instance across all chunks.
 
     Args:
         input_text: The raw user prompt to evaluate.
@@ -148,18 +157,26 @@ async def _analyze_chunked(
     chunks = chunk_prompt(input_text)
     logger.info("Chunking prompt into %d chunks for analysis", len(chunks))
 
-    chunk_scores = []
-    chunk_tokens = []
+    # Create LLM once and reuse for all chunks
+    llm = get_llm(llm_provider)
+    semaphore = asyncio.Semaphore(_CHUNK_CONCURRENCY)
 
-    for chunk in chunks:
-        analysis = await _analyze_single(
-            chunk.content, criteria_desc, rag_section, analysis_prompt,
-            llm_provider=llm_provider,
-        )
-        chunk_scores.append(analysis)
-        chunk_tokens.append(chunk.token_estimate)
+    async def _process_chunk(idx: int, chunk_content: str) -> dict:
+        async with semaphore:
+            logger.info("Analyzing chunk %d/%d", idx + 1, len(chunks))
+            return await _analyze_single(
+                chunk_content, criteria_desc, rag_section, analysis_prompt,
+                llm=llm,
+            )
 
-    aggregated = aggregate_dimension_scores(chunk_scores, chunk_tokens)
+    tasks = [
+        _process_chunk(i, chunk.content)
+        for i, chunk in enumerate(chunks)
+    ]
+    chunk_scores = await asyncio.gather(*tasks)
+    chunk_tokens = [chunk.token_estimate for chunk in chunks]
+
+    aggregated = aggregate_dimension_scores(list(chunk_scores), chunk_tokens)
     return aggregated, len(chunks)
 
 

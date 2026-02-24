@@ -77,7 +77,7 @@ services:
       target: dev
     container_name: prompt-evaluator-app-dev
     ports:
-      - "8000:8000"
+      - "8001:8001"
     volumes:
       - ../src:/app/src
       - ../public:/app/public
@@ -110,7 +110,7 @@ services:
       target: production
     container_name: prompt-evaluator-app-prod
     ports:
-      - "8000:8000"
+      - "8001:8001"
     volumes:
       - ../.env:/app/.env:ro
       - ../src/agent/nodes/google-key.json:/app/secrets/google-key.json:ro

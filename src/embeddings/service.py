@@ -37,6 +37,9 @@ def _get_embeddings_model() -> Embeddings:
     return _embeddings_model
 
 
+_MAX_EMBED_CHARS = 6000  # ~1500 tokens — safe for embedding models
+
+
 async def generate_embedding(input_text: str) -> list[float]:
     """Generate an embedding vector for the given text.
 
@@ -47,7 +50,9 @@ async def generate_embedding(input_text: str) -> list[float]:
         A list of floats representing the embedding vector.
     """
     model = _get_embeddings_model()
-    return await model.aembed_query(input_text)
+    # Truncate long texts to avoid exceeding embedding model context length
+    truncated = input_text[:_MAX_EMBED_CHARS] if len(input_text) > _MAX_EMBED_CHARS else input_text
+    return await model.aembed_query(truncated)
 
 
 def _build_summary_text(

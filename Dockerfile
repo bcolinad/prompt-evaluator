@@ -33,7 +33,7 @@ RUN uv sync --extra dev
 EXPOSE 8000
 
 # Development: Chainlit with watch mode for hot reload
-CMD ["uv", "run", "python", "run.py", "run", "src/app.py", "-w", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uv", "run", "python", "run.py", "run", "src/app.py", "-w", "--host", "0.0.0.0", "--port", "8001"]
 
 # ── Stage 3: Production ─────────────────────────────────
 FROM base AS production
@@ -50,4 +50,4 @@ RUN uv sync
 EXPOSE 8000
 
 # Production: Chainlit without watch mode
-CMD ["uv", "run", "python", "run.py", "run", "src/app.py", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uv", "run", "python", "run.py", "run", "src/app.py", "--host", "0.0.0.0", "--port", "8001"]
